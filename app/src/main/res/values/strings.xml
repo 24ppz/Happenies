@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Happiness</string>
+    <string name="app_name">Thumb Up App</string>
+    <string name="thumb_button">Thumb Up Button</string>
 </resources>

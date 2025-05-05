@@ -1,61 +1,124 @@
 package com.example.happiness;
 
-import android.animation.AnimatorSet;
-import android.animation.ArgbEvaluator;
-import android.animation.ObjectAnimator;
-import android.app.Activity;
-import android.graphics.drawable.AnimatedVectorDrawable;
-import android.graphics.drawable.Drawable;
+import android.app.AlertDialog;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.ScaleAnimation;
 import android.widget.ImageView;
-
-import androidx.activity.EdgeToEdge;
+import android.widget.RelativeLayout;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.content.ContextCompat;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
-
-    private ImageView fingerImageView;
+    private ImageView thumbButton;
+    private RelativeLayout container;
+    private boolean isFirstClick = true;
+    private Handler handler = new Handler();
+    private Runnable showDialogRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        fingerImageView = findViewById(R.id.iv_finger);
-        fingerImageView.setOnClickListener(new View.OnClickListener() {
+        thumbButton = findViewById(R.id.thumb_button);
+        container = findViewById(R.id.container);
+
+        thumbButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
-                startLickAnimation();
+            public void onClick(View v) {
+                // 按压动画
+                ScaleAnimation scaleAnimation = new ScaleAnimation(
+                        1.0f, 0.9f, 1.0f, 0.9f,
+                        Animation.RELATIVE_TO_SELF, 0.5f,
+                        Animation.RELATIVE_TO_SELF, 0.5f);
+                scaleAnimation.setDuration(100);
+                scaleAnimation.setRepeatCount(1);
+                scaleAnimation.setRepeatMode(Animation.REVERSE);
+                thumbButton.startAnimation(scaleAnimation);
+
+                // 改变颜色为抖音红
+                thumbButton.setColorFilter(ContextCompat.getColor(MainActivity.this, R.color.douyin_red));
+
+                // 创建冒泡的大拇指特效
+                createThumbBubbles();
+
+                // 第一次点击后20秒显示对话框
+                if (isFirstClick) {
+                    isFirstClick = false;
+                    showDialogRunnable = new Runnable() {
+                        @Override
+                        public void run() {
+                            showSuccessDialog();
+                        }
+                    };
+                    handler.postDelayed(showDialogRunnable, 20000);
+                }
             }
         });
-
-//        ImageView thumbUpImageView = findViewById(R.animator.thumb_up_animator);
-//        Drawable thumbUpDrawable = thumbUpImageView.getDrawable();
-//        if (thumbUpDrawable instanceof AnimatedVectorDrawable) {
-//            ((AnimatedVectorDrawable) thumbUpDrawable).start();
-//        }
-
     }
 
-    private void startLickAnimation() {
-        ObjectAnimator scaleX = ObjectAnimator.ofFloat(fingerImageView, "scaleX", 0.8f, 1.2f);
-        ObjectAnimator scaleY = ObjectAnimator.ofFloat(fingerImageView, "scaleY", 0.8f, 1.2f);
+    private void createThumbBubbles() {
+        Random random = new Random();
+        for (int i = 0; i < 5; i++) {
+            final ImageView thumb = new ImageView(this);
+            thumb.setImageResource(R.drawable.ic_thumb_up);
+            thumb.setColorFilter(getRandomColor());
 
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
+                    80, 80);
+            params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+            params.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            params.bottomMargin = 300;
 
-        ObjectAnimator colorAnimator = ObjectAnimator.ofArgb
-                (fingerImageView, "backgroundColor", 0xFF000000, 0xFFFF0000, 0xFF000000);
-        colorAnimator.setEvaluator(new ArgbEvaluator());
+            thumb.setLayoutParams(params);
+            container.addView(thumb);
 
-        AnimatorSet animatorSet = new AnimatorSet();
-        animatorSet.play(scaleX).with(scaleY).with(colorAnimator);
-        animatorSet.setDuration(300);
-        animatorSet.start();
+            // 动画
+            thumb.animate()
+                    .translationYBy(-1000)
+                    .translationX(random.nextInt(400) - 200)
+                    .alpha(0)
+                    .setDuration(2000)
+                    .withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            container.removeView(thumb);
+                        }
+                    })
+                    .start();
+        }
+    }
 
+    private int getRandomColor() {
+        Random random = new Random();
+        return Color.rgb(
+                random.nextInt(256),
+                random.nextInt(256),
+                random.nextInt(256)
+        );
+    }
 
+    private void showSuccessDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("助力成功")
+                .setMessage("感谢您的助力！")
+                .setCancelable(false);
+        AlertDialog dialog = builder.create();
+        dialog.setCancelable(false);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (handler != null && showDialogRunnable != null) {
+            handler.removeCallbacks(showDialogRunnable);
+        }
     }
 }
